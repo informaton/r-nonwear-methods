@@ -1,0 +1,239 @@
+---
+title: "AccelerometR"
+author: "Paul K Rosenfield"
+date: "March 15, 2016"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{AccelerometR}
+  %\VignetteEngine{rmarkdown::render}
+  \usepackage[utf8](inputenc)
+---
+
+
+
+
+
+
+# Introduction
+
+The vignette opens with a description of accelerometry data, the kinds of
+questions people are trying to answer with it, the challenges posed by using it,
+Actigraph GT3X+
+
+Accelerometry data from wearable devices such as the Jawbone, Fitbit, Nike band, and Apple Watch,
+is exploding in volume. If such data could be used to accurately predict what
+state of physical activity the wearer is in (exercising, sleeping lightly,
+sleeping deeply, being awake but inactive, etc.), then it could potentially provide
+a massive and comparatively cheap source of health information about large portions
+of our population, which could in turn be used to try to address questions about
+obesity, heart disease, depression, and many other public health problems.
+
+The problem of producing accurate state predictions is an area of active research
+in statistics. However, research is somewhat hampered by the lack of effective
+open-source prediction algorithms. That is where \code{accelerometR} hopes to
+step in. The \code{accelerometR} package is meant to provide a free, open-source
+way of conveniently reading, featurizing, fitting models to, and making
+predictions on accelerometry data.
+
+We are under no illusions that the current version provides effective predictions
+or is in any way ready for release to CRAN. Rather, \code{accelerometR} is meant
+to serve as a research platform for the Quantitative Sciences Unit (QSU) in the
+Stanford Medical School while they develop competitive prediction algorithms that
+might be suitable for release.
+
+
+
+
+
+# Our use case
+
+The QSU oversaw a study in which 16 test subjects wearing Actigraph GT3X+
+accelerometers conducted normal activities under video surveillance. The video
+footage was then analyzed to determine independently of the accelerometry data
+what physical state the subjects were in (e.g. wake, sleep, not-wearing the
+device). The resulting data were compiled into 16 very large .csv files (one
+for each subject).
+
+
+
+
+
+# read\_data()
+
+Step one is to get the data into a manageable form in R. \code{read_data} is a
+wrapper function which takes a list of file paths plus column information and
+returns a data frame representing the row-wise concatenation of the input data
+given standard column labels. We present our example here with 2 input .csv
+files.
+
+```{r, echo=FALSE}
+library("accelerometR")
+```
+
+```{r}
+filenames <- list(system.file("extdata", "subject100010.csv",
+                              package="accelerometR"),
+                  system.file("extdata", "subject100032.csv",
+                              package="accelerometR")
+                  )
+df <- read_data(path = filenames, id = list('100010', '100032'),
+                x = 'waistrawaxis1', y = 'waistrawaxis2', z = 'waistrawaxis3',
+                datetime = 'dttm', rawstate = 'se_event')
+head(df)
+```
+
+\code{path} and \code{id} get lists of pathnames and the subject id's associated
+with each file. \code{x}, \code{y}, and \code{z} get the column names in
+the .csv files that contain the acceleration data in the $x$, $y$, and $z$
+directions, respectively, and \code{datetime}, and \code{rawstate} get the
+column names corresponding to the timestamp and state information, respectively.
+If \code{rawstate} is \code{NULL}, it is assumed that the data do not have state
+information (as most accelerometry data do not).
+
+
+
+
+
+
+
+# transform\_data()
+
+There are two properties of the data that come directly from these .csv files
+that might make them less-than-optimal to work with. Firstly, they have one
+observation for every 1/40$^\text{th}$ of a second for each subject, which makes
+them quite large, and secondly they are feature-poor: all they contain are the
+raw acceleration values in the $x$, $y$, and $z$ directions.
+\code{transform_data} addresses both of these problems first by calculating a
+list of potentially interesting features based on the raw data, and second by
+summarizing their values over time intervals specified by the user. For our
+example, we use so-called 'epochs' of 30 seconds.
+
+```{r}
+featurized_df <- transform_data(df, epoch = 30)
+head(featurized_df)
+```
+
+The precise set of features that are calculated will be a matter of ongoing
+research. For more information on the features created, see the
+\code{transform_data} documentation.
+
+
+
+
+
+
+
+# build()
+
+Once the data are featurized, they are ready to be fed into our set of statistical
+models. In the future, this package will fit not only multiple statistical
+models but some form of ensemble model on top of them. For now it fits a hidden
+Markov model as implemented by the \code{mhsmm} package, and a random forest
+model as implemented by the \code{randomForest} package. Two other types of models were also
+considered for inclusion in the package: the Gaussian mixture model as
+implemented by the R package mClust, and changepoint smoothing as implemented by
+us. Ultimately, mClust was excluded because of its unreasonably long computation
+times (it already starts chugging on datasets with only 100 rows, whereas our
+data has more than 26,000 rows), and changepoint was excluded because it was
+hopelessly ineffective. Future models that may be considered include
+support-vector machines and gradient boosting machines.
+
+For each model that it fits, the \code{build} function does three things in
+sequence: it fits the model to a training set, makes predictions on a test set, computes
+classification tables for the model, and then fits the model again on all of the
+data that was provided. It returns a list containing the classification tables
+and the models that were fit to the full data.
+
+```{r}
+results <- build(featurized_df, ntree = 1000)
+class(results$hmm$model)
+class(results$randomForest$model)
+
+# class tables by rate
+results$hmm$training_class_table$rate$by_actual
+results$hmm$test_class_table$rate$by_actual
+results$randomForest$training_class_table$rate$by_actual
+results$randomForest$test_class_table$rate$by_actual
+
+# class tables by frequency
+results$hmm$training_class_table$frequency$by_actual
+results$hmm$test_class_table$frequency$by_actual
+results$randomForest$training_class_table$frequency$by_actual
+results$randomForest$test_class_table$frequency$by_actual
+```
+
+The user can also suppress one or more of its models if they are only interested
+in the output from some of the models:
+
+```{r}
+results <- build(featurized_df, hmm = FALSE, ntree = 1000)
+class(results$randomForest$model)
+results$hmm
+```
+
+
+
+
+
+
+
+
+
+
+
+
+# compute\_class\_tables()
+
+One of the subfunctions of \code{build()} was useful enough to export to the user
+as well. \code{compute_class_tables} takes a vector of predicted states, a
+vector of actual states, and a vector of subject id's, and produces a family of
+classification tables as output.
+
+The classification tables give their results in
+two forms: \code{by_frequency}, where each cell of the table gives the count of
+observations in that category, and \code{by_rate}, where each cell gives the
+row-wise fraction of observations in that category. For each form, the tables
+are also given at two levels of aggregation: \code{by_actual} and \code{by_actual_and_id}. 
+
+```{r}
+results$randomForest$training_class_table$frequency$by_actual
+results$randomForest$training_class_table$rate$by_actual
+
+#frequency classification table for 1st subject
+results$randomForest$training_class_table$frequency$by_actual_and_id[1, 1:3, 1:3]
+
+#rate classification table for 1st subject
+results$randomForest$training_class_table$rate$by_actual_and_id[1, 1:3, 1:3]
+```
+
+
+
+
+
+
+
+
+# predict_accelerometR()
+
+\code{predict_accelerometR}'s inputs are data to make a prediction on and up
+to two models to generate the predictions with. For each of the two model
+options, hmm\_model and randomForest\_model, a user can use the default
+models provided by passing in the string \code{"default"}, or a model of their
+own by passing in a model object, or they can suppress output from that model
+type by passing in \code{NULL}:
+
+```{r}
+predictions1 <- predict_accelerometR(featurized_df, hmm_model = "default",
+                                     randomForest_model = "default")
+summary(predictions1)
+
+predictions2 <- predict_accelerometR(featurized_df, hmm_model = NULL,
+                                     randomForest_model = "default")
+summary(predictions2)
+
+small_randomForest <- build(featurized_df, hmm = FALSE, ntree = 30)
+predictions3 <- predict_accelerometR(featurized_df, hmm_model = NULL,
+                                     randomForest_model = small_randomForest$randomForest$model)
+summary(predictions3)
+```
+
