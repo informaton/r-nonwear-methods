@@ -1,6 +1,10 @@
 # r-nonwear-methods
 R code for classifying nonwear accelerometry data with Hidden Markov Models and Gaussian Mixture Models
 
+## Files
+
+* __performanceResultsBoxPlots.R__ - Generates box plots from nonwear methods performance results which are saved in `results/performanceResults.csv`.  The plots can be saved to disk (.tiff) by editing the R code and changing the top level assignment of `saveAsTiffs` from `saveAsTiffs = FALSE` to `saveAsTiffs = TRUE`.
+
 # Requirements and installation
 
 ## accelerometR library
