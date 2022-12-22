@@ -5,7 +5,9 @@ R code for classifying nonwear accelerometry data with Hidden Markov Models and 
 
 * __manuscript.R__ - Follows the calculations from the manuscript (see citation) and produces the plot of the X, Y, and Z axis centroids, activity state, and log of the determinant of the covariance matrix for one subject.  Requires the __*accelerometR*__ library (instructions below).
 * __performanceResultsBoxPlots.R__ - Generates box plots from nonwear methods performance results which are saved in `results/performanceResults.csv`.  The plots can be saved to disk (.tiff) by editing the R code and changing the top level assignment of `saveAsTiffs` from `saveAsTiffs = FALSE` to `saveAsTiffs = TRUE`.
-* __gmmPartitioned.R__ - GMM training/testing of 15 subjects with a 60/40 partition.  Outputs table summaries.  Plots can be enabled by uncommenting these entries in the source code.  
+* __automateHMM.R__ - HMM training/testing of 15 subjects with a 50/50 partition.  Outputs performance table summary and saves results to "results/hmmPerformance.csv" when `saveResultsToCsv = TRUE`.    
+
+* __gmmPartitioned.R__ - GMM training/testing of 15 subjects with a 60/40 training/testing partition.  Outputs table summaries.  Plots can be enabled by uncommenting these entries in the source code.  
 
 # Requirements and installation
 
