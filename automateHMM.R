@@ -97,7 +97,7 @@ HMMPart <- function(id, partPercent, noiseRemoval) {
   Cov2=cov(trainSet[trainSet$new_state==2,featureSelect])
   Cov2
   
-  #initial probabilies uniformly set and transmisison matrix set with high inertia
+  #initial probabilities uniformly set and transmission matrix set with high inertia
   J<-2
   initial <- rep(1/J,J)
   P <- matrix(c(
