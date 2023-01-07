@@ -8,7 +8,17 @@ R code for classifying nonwear accelerometry data with Hidden Markov Models and 
 * __automateHMM.R__ - HMM training/testing of 15 subjects with a 50/50 partition.  Outputs performance table summary and saves results to "results/hmmPerformance.csv" when `saveResultsToCsv = TRUE`.    
 
 * __gmmPartitioned.R__ - GMM for 15 subjects with a 60/40 training/testing partition.  Outputs table summaries.  Plots can be enabled by uncommenting these entries in the source code.  
+
+* __gmmBalanced.R__ - GMM with a balanced approach using 80% for training and 20% for testing.
+
 * __hmmPartitioned.R__ - HMM for subject "100521" with a 60/40 training/testing partition.  Outputs table summaries.  Plots can be enabled by uncommenting these entries in the source code.  
+
+
+* __hmmMulti.R__ - HMM with multiple simulations using a hold-one out training and testing scheme.
+
+
+* __hmmMultiNewFeat.R__ - HMM with multiple simulations using a hold-one out training and testing scheme with features described in the manuscript.  
+
 
 # Requirements and installation
 
